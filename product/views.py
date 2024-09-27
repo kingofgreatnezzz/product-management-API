@@ -1,64 +1,62 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import Product, ProductBatch, Sale, SaleItem
-from .serializers import SaleSerializer
+# product_mgmt/views.py
 
-class SellProductAPIView(APIView):
+from rest_framework import generics
+from .models import Product, ProductBatch, Sale
+from .serializers import ProductSerializer, ProductBatchSerializer, SaleSerializer
 
-    def post(self, request):
-        sale_data = request.data.get('sale')
-        total_profit = 0
-        sale_items = []
-        
-        # Loop over products being sold
-        for item in sale_data['items']:
-            product = Product.objects.get(id=item['product_id'])
-            quantity_to_sell = item['quantity']
-            unit = item['unit']
-            selling_price = product.selling_price
-            
-            # Track how much we've sold from each batch
-            remaining_quantity = quantity_to_sell
-            batch_profits = 0
+# API for Product Creation
+class ProductCreateAPIView(generics.CreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-            # Get batches of product (FIFO: oldest first)
-            batches = ProductBatch.objects.filter(product=product).order_by('date_added')
-            
-            for batch in batches:
-                if remaining_quantity <= 0:
-                    break  # Stop if we've sold everything
+# API for Retrieving Product Information
+class ProductListAPIView(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-                # How much can we sell from this batch?
-                sell_from_batch = min(batch.quantity, remaining_quantity)
+# API for Adding Quantity to Products
+class AddQuantityAPIView(generics.CreateAPIView):
+    queryset = ProductBatch.objects.all()
+    serializer_class = ProductBatchSerializer
 
-                # Calculate profit for this batch
-                profit_per_unit = selling_price - batch.cost_price
-                batch_profit = profit_per_unit * sell_from_batch
-                batch_profits += batch_profit
-                
-                # Deduct the sold quantity from the batch
-                batch.quantity -= sell_from_batch
+# API for Selling Products
+class SellProductAPIView(generics.CreateAPIView):
+    queryset = Sale.objects.all()
+    serializer_class = SaleSerializer
+
+    def perform_create(self, serializer):
+        product = serializer.validated_data['product']
+        quantity_sold = serializer.validated_data['quantity_sold']
+        unit_measurement = serializer.validated_data['unit_measurement']
+        total_price = quantity_sold * product.selling_price
+
+        # Calculate profit using FIFO (First In, First Out)
+        batches = ProductBatch.objects.filter(product=product).order_by('added_at')
+        quantity_left = quantity_sold
+        cost_price_total = 0
+
+        for batch in batches:
+            if quantity_left == 0:
+                break
+
+            if batch.quantity_added >= quantity_left:
+                cost_price_total += quantity_left * batch.cost_price
+                batch.quantity_added -= quantity_left
+                batch.save()
+                quantity_left = 0
+            else:
+                cost_price_total += batch.quantity_added * batch.cost_price
+                quantity_left -= batch.quantity_added
+                batch.quantity_added = 0
                 batch.save()
 
-                # Deduct from remaining quantity to sell
-                remaining_quantity -= sell_from_batch
+        profit = total_price - cost_price_total
 
-            # Record the item in the sale
-            sale_item = SaleItem(
-                product=product,
-                unit=unit,
-                quantity=quantity_to_sell,
-                profit=batch_profits
-            )
-            sale_items.append(sale_item)
-            total_profit += batch_profits
+        serializer.save(total_price=total_price, profit=profit)
+        product.quantity -= quantity_sold
+        product.save()
 
-        # Create a new Sale record
-        sale = Sale.objects.create(total_profit=total_profit)
-        for sale_item in sale_items:
-            sale_item.sale = sale
-            sale_item.save()
-
-        serializer = SaleSerializer(sale)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+# API for Retrieving Sales History
+class SalesHistoryAPIView(generics.ListAPIView):
+    queryset = Sale.objects.all()
+    serializer_class = SaleSerializer

@@ -1,24 +1,19 @@
-from rest_framework import serializers
-from .models import *
+# product_mgmt/serializers.py
 
-class ProductSerializers(serializers.ModelSerializer):
+from rest_framework import serializers
+from .models import Product, ProductBatch, Sale
+
+class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'name', 'category', 'unit', 'selling_price']
+        fields = ['id', 'product_name', 'quantity', 'selling_price', 'cost_price', 'category', 'unit_measurement']
 
-class ProductBatchSerializers(serializers.ModelSerializer):
+class ProductBatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductBatch
-        fields = ['id', 'product', 'cost_price', 'date_added']
-
-class SaleItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SaleItem
-        fields = ['product', 'unit' ,'quantity', 'profit']
+        fields = ['id', 'product', 'quantity_added', 'cost_price', 'added_at']
 
 class SaleSerializer(serializers.ModelSerializer):
-    items = SaleItemSerializer(many=True)
     class Meta:
         model = Sale
-        fields = ['id', 'total_profit', 'items']
-
+        fields = ['id', 'product', 'quantity_sold', 'unit_measurement', 'total_price', 'profit', 'sale_date']
