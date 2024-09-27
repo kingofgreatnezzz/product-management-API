@@ -6,7 +6,7 @@ class ProductSerializers(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'category', 'unit', 'selling_price']
 
-class ProductBatchSerializers(serializers.ModelSerializers):
+class ProductBatchSerializers(serializers.ModelSerializer):
     class Meta:
         model = ProductBatch
         fields = ['id', 'product', 'cost_price', 'date_added']
@@ -21,4 +21,4 @@ class SaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = ['id', 'total_profit', 'items']
-        
+
