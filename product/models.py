@@ -15,7 +15,7 @@ class Product(models.Model):
 
 class ProductBatch(models.Model):
     product = models.ForeignKey(Product, related_name='batches', on_delete=models.CASCADE)
-    quantity_added = models.IntegerField()
+    quantity_added = models.IntegerField(default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2)
     added_at = models.DateTimeField(auto_now_add=True)
 
@@ -25,4 +25,5 @@ class Sale(models.Model):
     unit_measurement = models.CharField(max_length=50)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     profit = models.DecimalField(max_digits=10, decimal_places=2)
+    # Auto add date 
     sale_date = models.DateTimeField(auto_now_add=True)

@@ -25,6 +25,7 @@ class SellProductAPIView(generics.CreateAPIView):
     serializer_class = SaleSerializer
 
     def perform_create(self, serializer):
+        # Create and validate all the sales parameters
         product = serializer.validated_data['product']
         quantity_sold = serializer.validated_data['quantity_sold']
         unit_measurement = serializer.validated_data['unit_measurement']
@@ -32,13 +33,15 @@ class SellProductAPIView(generics.CreateAPIView):
 
         # Calculate profit using FIFO (First In, First Out)
         batches = ProductBatch.objects.filter(product=product).order_by('added_at')
+        # Quantity_left is amount of product to be bought
         quantity_left = quantity_sold
         cost_price_total = 0
 
         for batch in batches:
             if quantity_left == 0:
                 break
-
+                 
+            # Calculates cost price for sold quantity
             if batch.quantity_added >= quantity_left:
                 cost_price_total += quantity_left * batch.cost_price
                 batch.quantity_added -= quantity_left
